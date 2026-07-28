@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Dori Travel — Formulari Digjital</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --black:#0a0a0a;
+    --white:#ffffff;
+    --gray-50:#fafafa;
+    --gray-100:#f2f2f2;
+    --gray-200:#e4e4e4;
+    --gray-400:#a3a3a3;
+    --gray-600:#666666;
+    --red:#c0392b;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--white);
+    color:var(--black);
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{max-width:860px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+  header.topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px;border-bottom:1px solid var(--gray-200);
+    position:sticky;top:0;background:var(--white);z-index:20;
+  }
+  .brand{display:flex;flex-direction:column;line-height:1;cursor:pointer;}
+  .brand b{font-size:18px;letter-spacing:0.5px;}
+  .brand span{font-size:10px;color:var(--gray-600);letter-spacing:1px;margin-top:2px;}
+  .icon-btn{
+    background:none;border:none;font-size:22px;cursor:pointer;line-height:1;
+    padding:6px;color:var(--black);
+  }
+
+  main{flex:1;padding:24px 20px 100px;}
+
+  /* Home screen */
+  .home-hero{text-align:center;padding:40px 10px 28px;}
+  .home-hero h1{font-size:26px;font-weight:700;margin-bottom:8px;}
+  .home-hero p{color:var(--gray-600);font-size:14.5px;max-width:420px;margin:0 auto;}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--black);color:var(--white);border:none;
+    padding:15px 26px;border-radius:100px;font-size:15px;font-weight:600;
+    cursor:pointer;transition:transform .12s ease, opacity .12s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn:hover{opacity:0.88;}
+  .btn.block{width:100%;}
+  .btn.secondary{background:var(--white);color:var(--black);border:1.5px solid var(--gray-200);}
+  .btn.secondary:hover{background:var(--gray-50);opacity:1;}
+  .btn.ghost{background:transparent;color:var(--black);border:1.5px solid var(--black);}
+  .btn:disabled{background:var(--gray-200);color:var(--gray-400);cursor:not-allowed;}
+  .btn.small{padding:9px 16px;font-size:13px;}
+  .btn.danger{background:var(--red);color:#fff;}
+
+  .primary-actions{display:flex;flex-direction:column;gap:14px;max-width:340px;margin:0 auto;}
+
+  .stat-row{display:flex;gap:12px;justify-content:center;margin-top:36px;flex-wrap:wrap;}
+  .stat-card{
+    background:var(--gray-50);border-radius:var(--radius);padding:16px 20px;
+    min-width:110px;text-align:center;border:1px solid var(--gray-100);
+  }
+  .stat-card b{display:block;font-size:22px;}
+  .stat-card span{font-size:11px;color:var(--gray-600);letter-spacing:0.4px;}
+
+  /* Upload screen */
+  .counter-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--gray-50);border-radius:100px;padding:10px 18px;
+    font-size:13.5px;font-weight:600;margin-bottom:18px;
+  }
+  .counter-track{
+    flex:1;height:6px;background:var(--gray-200);border-radius:100px;margin:0 14px;overflow:hidden;
+  }
+  .counter-fill{height:100%;background:var(--black);border-radius:100px;transition:width .3s ease;}
+
+  .upload-actions{display:flex;gap:10px;margin-bottom:20px;}
+  .upload-actions .btn{flex:1;}
+
+  input[type=file]{display:none;}
+
+  .thumb-strip{
+    display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;margin-bottom:22px;
+    scrollbar-width:thin;
+  }
+  .thumb{
+    position:relative;flex:0 0 auto;width:64px;height:64px;border-radius:10px;
+    overflow:hidden;border:1.5px solid var(--gray-200);background:var(--gray-50);
+  }
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .thumb .status{
+    position:absolute;inset:0;background:rgba(255,255,255,0.85);
+    display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
+  }
+  .thumb .spinner{
+    width:16px;height:16px;border:2px solid var(--gray-300);border-top-color:var(--black);
+    border-radius:50%;animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  table.rows-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:20px;}
+  table.rows-table th{
+    text-align:left;font-size:10.5px;color:var(--gray-600);font-weight:700;
+    letter-spacing:0.3px;text-transform:uppercase;padding:6px 6px;border-bottom:2px solid var(--black);
+    white-space:nowrap;
+  }
+  table.rows-table td{padding:4px 5px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+  table.rows-table td.nr{font-weight:700;color:var(--gray-600);width:24px;text-align:center;}
+  table.rows-table input{
+    width:100%;border:1px solid transparent;background:transparent;font-size:12.5px;
+    padding:6px 5px;border-radius:6px;font-family:inherit;
+  }
+  table.rows-table input:focus{outline:none;border-color:var(--gray-400);background:var(--gray-50);}
+  table.rows-table input.flag{border-color:var(--red);}
+  .del-btn{background:none;border:none;color:var(--gray-400);font-size:16px;cursor:pointer;padding:4px;}
+  .del-btn:hover{color:var(--red);}
+
+  .empty-state{
+    text-align:center;padding:50px 20px;color:var(--gray-600);
+  }
+  .empty-state .glyph{font-size:34px;margin-bottom:10px;}
+  .empty-state h3{color:var(--black);font-size:16px;margin-bottom:6px;}
+  .empty-state p{font-size:13.5px;}
+
+  .sticky-footer{
+    position:fixed;bottom:0;left:0;right:0;background:var(--white);
+    border-top:1px solid var(--gray-200);padding:14px 20px;
+    display:flex;gap:10px;justify-content:center;z-index:20;
+  }
+  .sticky-footer .inner{max-width:860px;width:100%;display:flex;gap:10px;}
+
+  /* History */
+  .history-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 4px;border-bottom:1px solid var(--gray-100);
+  }
+  .history-item .meta b{display:block;font-size:14.5px;}
+  .history-item .meta span{font-size:12px;color:var(--gray-600);}
+
+  .toast{
+    position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+    background:var(--black);color:var(--white);padding:12px 20px;border-radius:100px;
+    font-size:13px;font-weight:600;z-index:50;opacity:0;pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  .hidden{display:none !important;}
+
+  @media (min-width:640px){
+    table.rows-table{font-size:13.5px;}
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="topbar">
+    <div class="brand" onclick="goHome()">
+      <b>DORI TRAVEL</b>
+      <span>FORMULARI DIGJITAL</span>
+    </div>
+    <button class="icon-btn" id="historyIconBtn" onclick="renderHistory()" title="Formularet">☰</button>
+  </header>
+
+  <main id="main"></main>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ---------------- Data / State ---------------- */
+const MAX_ROWS = 20;
+let currentSession = null; // { id, createdAt, rows: [] }
+let view = 'home';
+
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem('dori_history') || '[]'); }
+  catch(e){ return []; }
+}
+function saveHistory(h){ localStorage.setItem('dori_history', JSON.stringify(h)); }
+
+function newSession(){
+  return { id: 'f_' + Date.now(), createdAt: new Date().toISOString(), rows: [] };
+}
+
+function blankRow(){
+  return {
+    emri:'', mbiemri:'', ditelindje:'', nrKarteIdentiteti:'',
+    dataLeshimit:'', dataSkadence:'', thumb:null, status:'ready', flagged:{}
+  };
+}
+
+/* ---------------- Toast ---------------- */
+let toastTimer;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------------- Navigation ---------------- */
+function goHome(){ view='home'; render(); }
+function startNewSession(){ currentSession = newSession(); view='create'; render(); }
+function renderHistory(){ view='history'; render(); }
+
+function render(){
+  const main = document.getElementById('main');
+  if(view==='home') main.innerHTML = homeHTML();
+  else if(view==='create') main.innerHTML = createHTML();
+  else if(view==='history') main.innerHTML = historyHTML();
+  if(view==='create') attachRowListeners();
+}
+
+/* ---------------- Home ---------------- */
+function homeHTML(){
+  const hist = loadHistory();
+  const totalForms = hist.length;
+  const totalPax = hist.reduce((s,f)=>s+f.rows.length,0);
+  return `
+    <div class="home-hero">
+      <h1>Formulari i Pasagjerëve</h1>
+      <p>Fotografo kartat e identitetit, AI-ja plotëson të dhënat, dhe shkarko formularin gati për printim.</p>
+    </div>
+    <div class="primary-actions">
+      <button class="btn block" onclick="startNewSession()">+ Krijo Listë të Re</button>
+      <button class="btn secondary block" onclick="renderHistory()">Shiko Formularet</button>
+    </div>
+    <div class="stat-row">
+      <div class="stat-card"><b>${totalForms}</b><span>FORMULARE</span></div>
+      <div class="stat-card"><b>${totalPax}</b><span>PASAGJERË GJITHSEJ</span></div>
+    </div>
+  `;
+}
+
+/* ---------------- Create / Upload screen ---------------- */
+function createHTML(){
+  const rows = currentSession.rows;
+  const count = rows.length;
+  const pct = Math.round((count/MAX_ROWS)*100);
+  const canDownload = count > 0;
+
+  const thumbs = rows.map((r,i)=>`
+    <div class="thumb">
+      ${r.thumb ? `<img src="${r.thumb}">` : ''}
+      ${r.status==='loading' ? `<div class="status"><div class="spinner"></div></div>` : ''}
+    </div>
+  `).join('');
+
+  const tableRows = rows.map((r,i)=>`
+    <tr data-idx="${i}">
+      <td class="nr">${i+1}</td>
+      <td><input data-field="emri" value="${escAttr(r.emri)}" placeholder="Emri"></td>
+      <td><input data-field="mbiemri" value="${escAttr(r.mbiemri)}" placeholder="Mbiemri"></td>
+      <td><input data-field="ditelindje" value="${escAttr(r.ditelindje)}" placeholder="DD/MM/YYYY"></td>
+      <td><input data-field="nrKarteIdentiteti" value="${escAttr(r.nrKarteIdentiteti)}" placeholder="Nr. Karte"></td>
+      <td><input data-field="dataLeshimit" value="${escAttr(r.dataLeshimit)}" placeholder="DD/MM/YYYY"></td>
+      <td><input data-field="dataSkadence" value="${escAttr(r.dataSkadence)}" placeholder="DD/MM/YYYY"></td>
+      <td><button class="del-btn" onclick="deleteRow(${i})">✕</button></td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="counter-bar">
+      <span>${count} foto të ngarkuara</span>
+      <div class="counter-track"><div class="counter-fill" style="width:${pct}%"></div></div>
+      <span>${MAX_ROWS-count} vende bosh</span>
+    </div>
+
+    <div class="upload-actions">
+      <label class="btn block" style="cursor:pointer;">
+        📷 Fotografo
+        <input type="file" accept="image/*" capture="environment" onchange="handleFiles(this.files)">
+      </label>
+      <label class="btn secondary block" style="cursor:pointer;">
+        🖼 Ngarko nga Galeria
+        <input type="file" accept="image/*" multiple onchange="handleFiles(this.files)">
+      </label>
+    </div>
+
+    ${count>0 ? `<div class="thumb-strip">${thumbs}</div>` : ''}
+
+    ${count===0 ? `
+      <div class="empty-state">
+        <div class="glyph">🪪</div>
+        <h3>Asnjë kartë e ngarkuar ende</h3>
+        <p>Fotografo ose ngarko kartat e identitetit të pasagjerëve për t'i shtuar në listë.</p>
+      </div>
+    ` : `
+      <div style="overflow-x:auto;">
+        <table class="rows-table">
+          <thead><tr>
+            <th>Nr</th><th>Emri</th><th>Mbiemri</th><th>Ditëlindja</th>
+            <th>Nr. Karte</th><th>Data Lëshimit</th><th>Data Skadencës</th><th></th>
+          </tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+    `}
+
+    <div class="sticky-footer">
+      <div class="inner">
+        <button class="btn secondary" onclick="goHome()">Anulo</button>
+        <button class="btn block" id="downloadBtn" ${canDownload?'':'disabled'} onclick="downloadPDF()">Shkarko PDF</button>
+      </div>
+    </div>
+  `;
+}
+
+function escAttr(s){
+  return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function attachRowListeners(){
+  document.querySelectorAll('table.rows-table input').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const tr = e.target.closest('tr');
+      const idx = parseInt(tr.dataset.idx);
+      const field = e.target.dataset.field;
+      currentSession.rows[idx][field] = e.target.value;
+    });
+  });
+}
+
+function deleteRow(idx){
+  currentSession.rows.splice(idx,1);
+  render();
+}
+
+/* ---------------- File handling + AI extraction ---------------- */
+async function handleFiles(fileList){
+  const files = Array.from(fileList);
+  const remaining = MAX_ROWS - currentSession.rows.length;
+  if(remaining <= 0){ showToast('Kufiri prej 20 kartash u arrit.'); return; }
+  const toProcess = files.slice(0, remaining);
+  if(files.length > remaining) showToast(`Vetëm ${remaining} foto shtesë u pranuan (limit 20).`);
+
+  for(const file of toProcess){
+    const dataUrl = await fileToDataURL(file);
+    const row = blankRow();
+    row.thumb = dataUrl;
+    row.status = 'loading';
+    currentSession.rows.push(row);
+    render();
+    extractFromImage(dataUrl, currentSession.rows.indexOf(row));
+  }
+}
+
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+async function extractFromImage(dataUrl, idx){
+  try{
+    const mediaType = dataUrl.substring(dataUrl.indexOf(':')+1, dataUrl.indexOf(';'));
+    const base64 = dataUrl.split(',')[1];
+
+    const response = await fetch("/api/extract", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64, mediaType })
+    });
+
+    if(!response.ok){
+      throw new Error('Server responded ' + response.status);
+    }
+    const parsed = await response.json();
+
+    const row = currentSession.rows[idx];
+    if(!row) return;
+    row.emri = parsed.emri || '';
+    row.mbiemri = parsed.mbiemri || '';
+    row.ditelindje = parsed.ditelindje || '';
+    row.nrKarteIdentiteti = parsed.nr_karte_identiteti || '';
+    row.dataLeshimit = parsed.data_leshimit || '';
+    row.dataSkadence = parsed.data_skadence || '';
+    row.status = 'done';
+
+    const hasAny = row.emri || row.mbiemri || row.nrKarteIdentiteti;
+    if(!hasAny) showToast('Disa fusha s\'u lexuan qartë — plotësoji dorazi.');
+  }catch(err){
+    console.error('Extraction error', err);
+    const row = currentSession.rows[idx];
+    if(row) row.status = 'error';
+    showToast('Gabim gjatë leximit të kartës. Plotëso dorazi.');
+  }
+  render();
+}
+
+/* ---------------- PDF generation ---------------- */
+function downloadPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+  const pageW = 210;
+  const marginX = 12;
+  const usableW = pageW - marginX*2;
+
+  // Title
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(30);
+  doc.text('DORI', pageW/2 - 30, 26, {align:'center'});
+  doc.text('TRAVEL', pageW/2 + 22, 26, {align:'center'});
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica','bolditalic');
+  doc.text('AA280OT', pageW/2, 36, {align:'center'});
+
+  doc.setFontSize(10);
+  doc.text('SHKODER', pageW/2 - 45, 44);
+  doc.text('SHKODER', pageW/2 + 25, 44);
+
+  // Table
+  const colWidths = [12, 32, 32, 26, 34, 26, 24]; // sums ~186 -> scale to usableW
+  const scale = usableW / colWidths.reduce((a,b)=>a+b,0);
+  const scaled = colWidths.map(w=>w*scale);
+  const headers = ['NR','EMRI','MBIEMRI','DITELINDJE','NR. KARTE\nIDENTITETI','DATA E\nLESHIMIT','DATE\nSKADENCE'];
+
+  const startY = 52;
+  const rowH = 9.3;
+  let y = startY;
+
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.3);
+
+  function drawRow(cells, isHeader){
+    let x = marginX;
+    const h = isHeader ? rowH+2 : rowH;
+    doc.rect(x, y, usableW, h);
+    let cx = x;
+    for(let i=0;i<scaled.length;i++){
+      doc.rect(cx, y, scaled[i], h);
+      cx += scaled[i];
+    }
+    doc.setFont('helvetica', isHeader ? 'bolditalic' : 'italic');
+    doc.setFontSize(isHeader ? 8 : 9);
+    cx = x;
+    for(let i=0;i<cells.length;i++){
+      const lines = String(cells[i]).split('\n');
+      const lineH = 3.2;
+      const totalH = lines.length*lineH;
+      let ty = y + h/2 - totalH/2 + lineH - 1;
+      lines.forEach(line=>{
+        doc.text(line, cx + scaled[i]/2, ty, {align:'center'});
+        ty += lineH;
+      });
+      cx += scaled[i];
+    }
+    y += h;
+  }
+
+  drawRow(headers, true);
+  doc.setFont('helvetica','italic');
+  doc.setFontSize(9);
+
+  for(let i=0;i<MAX_ROWS;i++){
+    const r = currentSession.rows[i] || blankRow();
+    drawRow([
+      String(i+1),
+      r.emri||'', r.mbiemri||'', r.ditelindje||'',
+      r.nrKarteIdentiteti||'', r.dataLeshimit||'', r.dataSkadence||''
+    ], false);
+  }
+
+  // Footer
+  y += 18;
+  doc.setFont('helvetica','bolditalic');
+  doc.setFontSize(11);
+  doc.text("AGJENSIA TURISTIKE `DORI TRAVEL", pageW/2, y, {align:'center'}); y+=7;
+  doc.text('SHKODER', pageW/2, y, {align:'center'}); y+=7;
+  doc.text('CEL  +355 672302899', pageW/2, y, {align:'center'}); y+=14;
+  doc.text('ADMINISTRATORI', pageW/2, y, {align:'center'}); y+=7;
+  doc.text('ARBEN BALAJ', pageW/2, y, {align:'center'});
+
+  const filename = `dori-travel-${new Date().toISOString().slice(0,10)}-${Date.now()}.pdf`;
+  doc.save(filename);
+
+  // Save to history
+  const hist = loadHistory();
+  hist.unshift({
+    id: currentSession.id,
+    createdAt: currentSession.createdAt,
+    rowCount: currentSession.rows.filter(r=>r.emri||r.mbiemri||r.nrKarteIdentiteti).length,
+    rows: currentSession.rows.map(r=>({
+      emri:r.emri, mbiemri:r.mbiemri, ditelindje:r.ditelindje,
+      nrKarteIdentiteti:r.nrKarteIdentiteti, dataLeshimit:r.dataLeshimit, dataSkadence:r.dataSkadence
+    }))
+  });
+  saveHistory(hist);
+  showToast('PDF u shkarkua me sukses.');
+}
+
+/* ---------------- History screen ---------------- */
+function historyHTML(){
+  const hist = loadHistory();
+  if(hist.length===0){
+    return `
+      <div class="empty-state">
+        <div class="glyph">📄</div>
+        <h3>Ende s'ka formulare</h3>
+        <p>Formularet e krijuara do të shfaqen këtu për rishkarkim.</p>
+      </div>
+      <div style="text-align:center;margin-top:20px;">
+        <button class="btn" onclick="startNewSession()">+ Krijo Listë të Re</button>
+      </div>
+    `;
+  }
+  const items = hist.map((f,i)=>{
+    const date = new Date(f.createdAt);
+    const dateStr = date.toLocaleDateString('sq-AL', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const timeStr = date.toLocaleTimeString('sq-AL', {hour:'2-digit',minute:'2-digit'});
+    return `
+      <div class="history-item">
+        <div class="meta">
+          <b>Formulari — ${f.rowCount} pasagjerë</b>
+          <span>${dateStr} · ${timeStr}</span>
+        </div>
+        <button class="btn small secondary" onclick="redownload(${i})">Shkarko</button>
+      </div>
+    `;
+  }).join('');
+  return `
+    <h2 style="font-size:18px;margin-bottom:12px;">Formularet e Mëparshme</h2>
+    ${items}
+    <div style="text-align:center;margin-top:26px;">
+      <button class="btn" onclick="startNewSession()">+ Krijo Listë të Re</button>
+    </div>
+  `;
+}
+
+function redownload(i){
+  const hist = loadHistory();
+  const f = hist[i];
+  currentSession = { id:f.id, createdAt:f.createdAt, rows: f.rows.map(r=>({...r, thumb:null, status:'done'})) };
+  downloadPDF();
+  currentSession = null;
+}
+
+/* ---------------- Init ---------------- */
+render();
+</script>
+</body>
+</html>
