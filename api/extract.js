@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    res.status(500).json({ error: 'Server is missing ANTHROPIC_API_KEY' });
+    res.status(500).json({ error: 'Extraction configuration missing', code: 'missing_api_key', message: 'Server configuration is incomplete. Contact the administrator.' });
     return;
   }
 
@@ -51,8 +51,30 @@ export default async function handler(req, res) {
     });
 
     if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text();
-      res.status(502).json({ error: 'Anthropic API error', detail: errText });
+      // Do not expose upstream response bodies: they can contain sensitive data.
+      let upstreamError = {};
+      try { upstreamError = await anthropicRes.json(); } catch (_) {}
+      const type = upstreamError?.error?.type || 'upstream_error';
+      const code = anthropicRes.status === 401 ? 'invalid_api_key'
+        : anthropicRes.status === 403 ? 'access_denied'
+        : anthropicRes.status === 429 ? 'rate_limited'
+        : anthropicRes.status === 402 ? 'billing_required'
+        : anthropicRes.status === 400 ? 'invalid_request'
+        : anthropicRes.status >= 500 ? 'provider_unavailable'
+        : 'provider_rejected';
+      console.error('ID extraction provider rejected request', {
+        status: anthropicRes.status, type, code,
+      });
+      res.status(502).json({
+        error: 'Extraction provider error', code,
+        upstreamStatus: anthropicRes.status,
+        message: code === 'invalid_api_key' ? 'The AI API key was rejected.'
+          : code === 'billing_required' ? 'The AI account requires billing or credits.'
+          : code === 'rate_limited' ? 'The AI service rate limit was reached. Try again later.'
+          : code === 'access_denied' ? 'The AI account does not have permission to make this request.'
+          : code === 'invalid_request' ? 'The AI provider rejected the request format or model.'
+          : 'The AI provider could not process the request.',
+      });
       return;
     }
 
@@ -77,6 +99,7 @@ export default async function handler(req, res) {
       data_skadence: parsed.data_skadence || '',
     });
   } catch (err) {
-    res.status(500).json({ error: 'Extraction failed', detail: String(err) });
+    console.error('ID extraction internal failure', { name: err?.name || 'Error' });
+    res.status(500).json({ error: 'Extraction failed', code: 'internal_error', message: 'An internal extraction error occurred.' });
   }
 }
